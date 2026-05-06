@@ -1,49 +1,181 @@
-
 <html>
-  <head>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-  </head>
-  <body>
 
-  	Make sure to run this via a server
+<head>
+  <title>Dog Breed Prediction</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
 
-    <br>
-    <input accept="image/*" type='file' id="input_button" />
+<body>
+  <h1>Dog Breed Detector</h1>
+<div>Please be patient when uploading the image and predicting.</div>
+  <div class="input-section">
+    <h3>Select Input Method:</h3>
+    <div class="button-group">
+      <input accept="image/*" type='file' id="input_button" style="display: none;" />
+      <button onclick="document.getElementById('input_button').click()">Upload Image</button>
+      <button class="toggle-button" onclick="toggleWebcam()">Toggle Webcam</button>
+      <button class="stop-button" onclick="stopWebcam()" style="display: none;" id="stop-btn">Stop Webcam</button>
+    </div>
 
-  	<br>
-    <img id="img1" src="./image.jpg" style="width: 300px " />
-    <br>  <br>
-    <button   onclick="predict()">predict</button>
-    <br>
-    <p id="result"> </p>
+    <div class="button-group">
+      <button onclick="predict()">Predict Breed</button>
+      <button class="toggle-button" onclick="captureFromWebcam()">Capture</button>
+    </div>
 
-    <script>
+    <div class="content-container">
+      <div class="image-section">
+        <canvas id="webcam"></canvas>
+        <img id="img1"/>
+      </div>
 
-      let image = document.getElementById('img1');
-      let input_button = document.getElementById('input_button');
+      <div class="results-section">
+        <h3>Prediction Results</h3>
+        <p id="result" style="min-height: 200px;">Select an image, or use your webcam to get started.</p>
+      </div>
+    </div>
+  </div>
+  <script src="rand.js"></script>
+  <script>
+    let model;
+    let webcamStream = null;
+    let webcamActive = false;
+    let videoElement = null;
+    const classes = ["Bohemian Wire-Haired Pointing Griffon", "Eskimo Dog", "Drentsche Partridge", "Thai Ridgeback", "Berger Picard", "Bluetick Coonhound", "Skye Terrier", "Russian Toy", "Greyhound", "Small Swiss Hound", "Large Munsterlander", "Corgi", "Mudi", "Miniature Bull Terrier", "Alpine Dachsbracke Dog", "Bichon Frisé", "Miniature Pinscher", "Great Gascony Blue", "Griffon Bleu de Gascogne", "Bullmastiff", "Boston Terrier", "East Siberian Laika", "Irish Setter", "Blue Gascony Basset", "Shar Pei", "Irish Terrier", "Podenco Canario", "Whippet", "Bouvier Des Ardennes", "Scotch Terrier", "Rottweiler", "Pyrenean Sheepdog - Smooth Faced", "Schapendoes", "Saint Germain Pointer", "Wirehaired Vizsla", "Tibetan Mastiff", "Mioritic Shepherd", "French Hound", "Portuguese Warren Hound-Portuguese Podengo Dog", "American Foxhound", "Hamiltonstövare", "Kelpie", "German Roughhaired Pointer", "Ariegeois", "Spanish Greyhound", "Norfolk Terrier", "Elk Hound", "Toy Poodle", "Schipperke", "Leonberg", "German Pinscher", "Neapolitan Mastiff", "Schnauzer", "Smooth Collie", "Picardy Spaniel", "Pomeranian", "Rough Collie", "Dalmatian", "French White And Orange Hound", "Italian Greyhound", "Bernese Mountain Dog", "Estonian Hound", "Afghan Hound", "Field Spaniel", "Belgian Shepherd", "Czechoslovakian Wolfdog", "King Charles Spaniel", "Polish Hunting", "Greek Harehound", "Irish Glen Of Imaal Terrier", "Staffordshire Bull Terrier", "Presa Canario", "Toy Terrier", "Sloughi", "Broholmer", "Dachshund", "Pit Bull", "Spanish Hound", "Dandie Dinmont Terrier", "Hokkaido", "Japanese Spitz", "Sealyham Terrier", "Lapponian Herder Dog", "English Springer", "Continental Bulldog", "Old English Sheepdog", "Scottish Deerhound", "French White & Black Hound", "Karelian Bear", "Cimarrón Uruguayo", "Basenji", "French Bulldog", "Coyote", "Poitevin", "Shih Tzu", "Blue Picardy Spaniel", "Komondor", "Istrian Wire-Haired Hound", "Pekingese", "Small Blue Gascony", "Tosa", "Briquet Griffon Vendeen Dog", "German Longhaired Pointer", "Tatra Shepherd", "Basset Hound", "Clumber Spaniel", "French Pointing - Pyrenean Type", "Great Dane", "Irish Soft Coated Wheaten Terrier", "Kishu", "Tornjak", "Thai Bangkaew", "Old Danish Pointer", "Bedlington Terrier", "Transylvanian Hound", "Border Terrier", "Auvergne Pointer", "Dhole", "Griffon Nivernais", "Miniature American Shepherd", "Portuguese Sheepdog", "Austrian Pinscher", "Dutch Smoushond", "Lhasa", "Pharaoh Hound", "Hanover Hound", "Wetterhoun", "Labrador", "Central Asian Shepherd Dog", "Landseer (European Continental Type)", "Šarplaninac", "Italian Short-Haired Segugio", "Chihuahua", "Grand Anglo-Français Tricolore", "Irish Water Spaniel", "Tibetan Terrier", "Scottish Terrier", "Shiba Inu", "Brazilian Tracker", "Jack Russell Terrier", "Newfoundland", "Lakeland Terrier Dog", "Austrian Black and Tan Hound", "Kangal Shepherd", "Appenzell Cattle Dog", "Harrier", "Rafeiro Of Alentejo", "Stabyhoun", "Castro Laboreiro", "Halden Hound", "Polish Lowland Sheepdog", "Pug", "Barak Hound", "Polish Hound Dog", "German Shorthaired Pointer", "Norwegian Lundehund", "Havanese", "Lakeland Terrier", "Pont-Audemer Spaniel", "Medium-Sized Anglo-French Hound", "Entlebucher Mountian Dog", "Russo-European Laika", "English Cocker Spaniel", "Malamute", "Lhasa Apso", "Brabancon Griffon", "African Hunting Dog", "Caucasian Shepherd Dog", "Beagle", "Taiwan", "Tyrolean Hound", "Croatian Shepherd", "Canaan", "Pyrenean Mountain Dog", "Maremma And The Abruzzes Sheepdog", "Cocker Spaniel", "Italian Sighthound", "Barbet", "Grand Griffon Vendéen", "Cockapoo", "Little Lion", "Japanese Terrier", "Italian Spinone", "German Spaniel", "Vizsla", "Wire-Haired Pointing Griffon Korthals", "Prague Ratter Dog", "Welsh Springer Spaniel", "Sussex Spaniel", "South Russian Shepherd Dog", "Dogue De Bordeaux", "Irish Wolfhound", "Pudelpointer", "Bohemian Shepherd", "Hygen Hound", "Silky Terrier", "Smålandsstövare", "American Spaniel", "Serbian Tricolour Hound", "Maltese", "Bergamasco Shepherd", "Italian Rough-Haired Segugio", "Dobermann", "African Wild Dog", "Affenpinscher", "Labrador Retriever", "Slovakian Chuvach", "Parson Russell Terrier", "Porcelaine", "Norman Artesien Basset", "Ibizan Podenco", "Irish Red And White Setter", "Weimaraner", "Manchester Terrier", "Brittany Spaniel", "Papillon", "Jämthund", "Grand Basset Griffon Vendéen", "Black Russian Terrier", "Ariege Pointer", "Deerhound", "Petit Basset Griffon Vendeen", "Montenegrin Mountain Hound", "Coarse-Haired Styrian Hound", "English Pointer", "Brazilian Terrier", "Danish-Swedish Farmdog", "Catalan Sheepdog", "Portuguese Pointer", "Cirneco Dell'Etna", "Curly-Coated Retriever", "Kai", "German Shepherd", "American Staffordshire Terrier", "Italian Pointing", "Tibetan Spaniel", "Bucovina Shepherd", "Karst Shepherd", "German Spitz", "Saarloos Wolfdog", "Norrbottenspitz", "Istrian Short-Haired Hound", "Samoyed", "Labradoodle", "Coton De Tulear", "Transmontano Mastiff", "Smooth Fox Terrier", "Alaskan Malamute", "Flat Coated Retriever Dog", "Groenendael", "Wirehaired Slovakian Pointer", "Border Collie", "Finnish Hound", "Bearded Collie", "Saluki", "French Spaniel", "Nederlandse Kooikerhondje", "Spanish Water Dog", "Black And Tan Coonhound Dog", "Fawn Brittany Griffon", "Chow Chow", "Italian Cane Corso", "Westphalian Dachsbracke", "Entlebuch Cattle", "Swedish Vallhund", "Australian Shepherd", "Magyar Agár", "Italian Volpino", "Irish Red Setter", "Saint Bernard", "German Hunting Terrier", "Bouvier Des Flandres", "English Foxhound", "Leonberger", "Japanese Spaniel", "Mexican Hairless", "Australian Cattle Dog", "Akita", "Bolognese", "Spanish Mastiff", "Braque du Bourbonnais", "Appenzeller", "Miniature Poodle", "Borzoi", "Polish Greyhound", "Aidi", "Greater Swiss Mountain Dog", "Dingo", "American Hairless", "Beauceron", "Gascon Saintongeois", "Cavalier King Charles Spaniel", "Icelandic Sheepdog", "Majorca Shepherd", "Yorkshire Terrier", "Irish Spaniel", "Husky", "Rastreador Brasileiro", "Posavatz Hound", "Drever", "Segugio Maremmano", "Poodle", "Otterhound", "Keeshond", "White Swiss Shepherd", "Puli", "Kleiner Münsterländer", "Chesapeake Bay Retriever", "Welsh Corgi (Cardigan)", "Serbian Hound", "Australian Kelpie", "Shikoku", "Rhodesian Ridgeback", "Welsh Terrier", "Finnish Lapponian", "Portuguese Water Dog", "Wirehaired Pointing Griffon", "Komondor Dog", "Cairn Terrier", "Blenheim Spaniel", "Pumi Dog", "Kintamani-Bali", "Korea Jindo Dog", "Peruvian Hairless Dog", "Stumpy Tail Cattle Dog", "Bavarian Mountain Scent Hound", "Japanese Chin", "Kromfohrländer Dog", "Briard", "Pembroke Welsh Corgi", "Majorca Mastiff", "Kuvasz", "West Siberian Laika", "Finnish Spitz", "Malinois", "Gordon Setter", "Norwegian Buhund", "Fila Brasileiro", "Giant Schnauzer", "West Highland White Terrier", "Carpathian Shepherd", "Dutch Shepherd Dog", "Slovakian Hound", "Long-Haired Pyrenean Sheepdog", "Golden Retriever", "Great Anglo-French Hound", "German Hound", "Treeing Walker Coonhound", "Boxer", "Lancashire Heeler", "Estrela Mountain", "Griffon Bruxellois", "Saint Miguel Cattle Dog", "English Toy Terrier", "Cardigan", "Chinese Crested Dog", "Dogo Argentino", "Hovawart", "Azawakh", "Swedish Lapphund", "English Setter", "Shetland Sheepdog", "Pyrenean Mastiff", "Schiller Hound", "Canadian Eskimo Dog", "Cesky Terrier", "Wire Fox Terrier", "Bloodhound", "English Springer Spaniel", "Bull Terrier(Target Dog)", "Kerry Blue Terrier", "Burgos Pointer", "Eurasian", "Mastiff", "Norwich Terrier", "Artois Hound", "Basset Fauve De Bretagne", "French Tricolour Hound", "Swiss Hound", "Yakutian Laika", "Redbone", "Ibizan Hound", "Wheaten Terrier", "Australian Terrier", "Valencian Terrier", "Romagna Water Dog", "Welsh Corgi (Pembroke)", "Nova Scotia Duck Tolling Retriever", "American Water Spaniel"];
+    window.onload = async () => {
+      model = await tf.loadGraphModel('./model.json');
+      console.log('Model loaded');
+    };
+    const input_button = document.getElementById('input_button');
+    input_button.onchange = evt => {
+      const [file] = input_button.files;
+      if (file) {
+        stopWebcam();
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = document.getElementById('img1');
+          img.src = e.target.result;
+          img.style.display = 'block';
+          document.getElementById('webcam').style.display = 'none';
+          document.getElementById('result').innerHTML = 'Image loaded. Click "Predict Breed" to analyze.';
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    async function toggleWebcam() {
+      if (!webcamActive) {
+        try {
+          webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+          const canvas = document.getElementById('webcam');
+          canvas.style.display = 'block';
+          document.getElementById('img1').style.display = 'none';
 
-      input_button.onchange = evt => {
-        const [file] = input_button.files
-        if (file) {
-          image.src = URL.createObjectURL(file)
+          const video = document.createElement('video');
+          video.srcObject = webcamStream;
+          video.play();
+          videoElement = video;
+
+          const ctx = canvas.getContext('2d');
+          const width = 640;
+          const height = 480;
+          canvas.width = width;
+          canvas.height = height;
+
+          function drawFrame() {
+            if (webcamActive) {
+              ctx.drawImage(video, 0, 0, width, height);
+              requestAnimationFrame(drawFrame);
+            }
+          }
+
+          webcamActive = true;
+          document.getElementById('stop-btn').style.display = 'inline-block';
+          drawFrame();
+          document.getElementById('result').innerHTML = 'Webcam active.';
+        } catch (err) {
+          alert('Error accessing webcam: ' + err.message);
         }
+      } else {
+        stopWebcam();
+      }
+    }
+
+    function stopWebcam() {
+      if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+        videoElement = null;
+        webcamActive = false;
+        document.getElementById('webcam').style.display = 'none';
+        document.getElementById('stop-btn').style.display = 'none';
+      }
+    }
+
+    function captureFromWebcam() {
+      if (webcamActive) {
+        const canvas = document.getElementById('webcam');
+        const img = document.getElementById('img1');
+        img.src = canvas.toDataURL();
+        img.style.display = 'block';
+        img.onload = () => {
+          predict();
+        };
+      } else {
+        alert('Please activate the webcam first!');
+      }
+    }
+
+    async function predict() {
+      const resultDiv = document.getElementById('result');
+      const imgElement = document.getElementById('img1');
+
+      if (!imgElement.src) {
+        resultDiv.innerHTML = 'Please select an image first';
+        return;
       }
 
-      async function predict() {
-        var  model = await tf.loadGraphModel('./model.json');
+      if (!model) {
+        resultDiv.innerHTML = '<span class="loading">Loading doggie model...</span>';
+        model = await tf.loadGraphModel('./model.json');
+      }
 
-        let example = tf.browser.fromPixels(document.getElementById("img1") , 3 ).cast('float32');
-        console.log(  example.shape  )
-        example = example.reshape([1,example.shape[0], example.shape[1] ,example.shape[2]]);
+      resultDiv.innerHTML = '<span class="loading">Analyzing image...</span>';
 
+      try {
+        let example = tf.browser.fromPixels(imgElement, 3).cast('float32');
+        const originalShape = example.shape;
+        example = example.reshape([1, originalShape[0], originalShape[1], originalShape[2]]);
+        let topResultsArray = ["Oh! This looks like a", "Well, this is for sure a", "This is literally a", "It's a", "o thnk ots a", "You are a", "This is a", "I know it I know it! It's a.. uhh..", "This creature is a", "Ooh! It's a", "I think this is a", "This might be a", "This dog must be a", "Since it has eyes, it must be a", "Is this a", "Now, this creature is a", "This has to be a", "It's him! It's a", "doggie race:", "GENDER FOUND:", "I found the color, it is"]
         let prediction = await model.predict(example);
         let class_scores = await prediction.data();
-        let max_score_id =  class_scores.indexOf(Math.max(...class_scores));
-        let classes = [  "Bohemian Wire-Haired Pointing Griffon" ,  "Eskimo Dog" ,  "Drentsche Partridge" ,  "Thai Ridgeback" ,  "Berger Picard" ,  "Bluetick Coonhound" ,  "Skye Terrier" ,  "Russian Toy" ,  "Greyhound" ,  "Small Swiss Hound" ,  "Large Munsterlander" ,  "Corgi" ,  "Mudi" ,  "Miniature Bull Terrier" ,  "Alpine Dachsbracke Dog" ,  "Bichon Frisé" ,  "Miniature Pinscher" ,  "Great Gascony Blue" ,  "Griffon Bleu de Gascogne" ,  "Bullmastiff" ,  "Boston Terrier" ,  "East Siberian Laika" ,  "Irish Setter" ,  "Blue Gascony Basset" ,  "Shar Pei" ,  "Irish Terrier" ,  "Podenco Canario" ,  "Whippet" ,  "Bouvier Des Ardennes" ,  "Scotch Terrier" ,  "Rottweiler" ,  "Pyrenean Sheepdog - Smooth Faced" ,  "Schapendoes" ,  "Saint Germain Pointer" ,  "Wirehaired Vizsla" ,  "Tibetan Mastiff" ,  "Mioritic Shepherd" ,  "French Hound" ,  "Portuguese Warren Hound-Portuguese Podengo Dog" ,  "American Foxhound" ,  "Hamiltonstövare" ,  "Kelpie" ,  "German Roughhaired Pointer" ,  "Ariegeois" ,  "Spanish Greyhound" ,  "Norfolk Terrier" ,  "Elk Hound" ,  "Toy Poodle" ,  "Schipperke" ,  "Leonberg" ,  "German Pinscher" ,  "Neapolitan Mastiff" ,  "Schnauzer" ,  "Smooth Collie" ,  "Picardy Spaniel" ,  "Pomeranian" ,  "Rough Collie" ,  "Dalmatian" ,  "French White And Orange Hound" ,  "Italian Greyhound" ,  "Bernese Mountain Dog" ,  "Estonian Hound" ,  "Afghan Hound" ,  "Field Spaniel" ,  "Belgian Shepherd" ,  "Czechoslovakian Wolfdog" ,  "King Charles Spaniel" ,  "Polish Hunting" ,  "Greek Harehound" ,  "Irish Glen Of Imaal Terrier" ,  "Staffordshire Bull Terrier" ,  "Presa Canario" ,  "Toy Terrier" ,  "Sloughi" ,  "Broholmer" ,  "Dachshund" ,  "Pit Bull" ,  "Spanish Hound" ,  "Dandie Dinmont Terrier" ,  "Hokkaido" ,  "Japanese Spitz" ,  "Sealyham Terrier" ,  "Lapponian Herder Dog" ,  "English Springer" ,  "Continental Bulldog" ,  "Old English Sheepdog" ,  "Scottish Deerhound" ,  "French White & Black Hound" ,  "Karelian Bear" ,  "Cimarrón Uruguayo" ,  "Basenji" ,  "French Bulldog" ,  "Coyote" ,  "Poitevin" ,  "Shih Tzu" ,  "Blue Picardy Spaniel" ,  "Komondor" ,  "Istrian Wire-Haired Hound" ,  "Pekingese" ,  "Small Blue Gascony" ,  "Tosa" ,  "Briquet Griffon Vendeen Dog" ,  "German Longhaired Pointer" ,  "Tatra Shepherd" ,  "Basset Hound" ,  "Clumber Spaniel" ,  "French Pointing - Pyrenean Type" ,  "Great Dane" ,  "Irish Soft Coated Wheaten Terrier" ,  "Kishu" ,  "Tornjak" ,  "Thai Bangkaew" ,  "Old Danish Pointer" ,  "Bedlington Terrier" ,  "Transylvanian Hound" ,  "Border Terrier" ,  "Auvergne Pointer" ,  "Dhole" ,  "Griffon Nivernais" ,  "Miniature American Shepherd" ,  "Portuguese Sheepdog" ,  "Austrian Pinscher" ,  "Dutch Smoushond" ,  "Lhasa" ,  "Pharaoh Hound" ,  "Hanover Hound" ,  "Wetterhoun" ,  "Labrador" ,  "Central Asian Shepherd Dog" ,  "Landseer (European Continental Type)" ,  "Šarplaninac" ,  "Italian Short-Haired Segugio" ,  "Chihuahua" ,  "Grand Anglo-Français Tricolore" ,  "Irish Water Spaniel" ,  "Tibetan Terrier" ,  "Scottish Terrier" ,  "Shiba Inu" ,  "Brazilian Tracker" ,  "Jack Russell Terrier" ,  "Newfoundland" ,  "Lakeland Terrier Dog" ,  "Austrian Black and Tan Hound" ,  "Kangal Shepherd" ,  "Appenzell Cattle Dog" ,  "Harrier" ,  "Rafeiro Of Alentejo" ,  "Stabyhoun" ,  "Castro Laboreiro" ,  "Halden Hound" ,  "Polish Lowland Sheepdog" ,  "Pug" ,  "Barak Hound" ,  "Polish Hound Dog" ,  "German Shorthaired Pointer" ,  "Norwegian Lundehund" ,  "Havanese" ,  "Lakeland Terrier" ,  "Pont-Audemer Spaniel" ,  "Medium-Sized Anglo-French Hound" ,  "Entlebucher Mountian Dog" ,  "Russo-European Laika" ,  "English Cocker Spaniel" ,  "Malamute" ,  "Lhasa Apso" ,  "Brabancon Griffon" ,  "African Hunting Dog" ,  "Caucasian Shepherd Dog" ,  "Beagle" ,  "Taiwan" ,  "Tyrolean Hound" ,  "Croatian Shepherd" ,  "Canaan" ,  "Pyrenean Mountain Dog" ,  "Maremma And The Abruzzes Sheepdog" ,  "Cocker Spaniel" ,  "Italian Sighthound" ,  "Barbet" ,  "Grand Griffon Vendéen" ,  "Cockapoo" ,  "Little Lion" ,  "Japanese Terrier" ,  "Italian Spinone" ,  "German Spaniel" ,  "Vizsla" ,  "Wire-Haired Pointing Griffon Korthals" ,  "Prague Ratter Dog" ,  "Welsh Springer Spaniel" ,  "Sussex Spaniel" ,  "South Russian Shepherd Dog" ,  "Dogue De Bordeaux" ,  "Irish Wolfhound" ,  "Pudelpointer" ,  "Bohemian Shepherd" ,  "Hygen Hound" ,  "Silky Terrier" ,  "Smålandsstövare" ,  "American Spaniel" ,  "Serbian Tricolour Hound" ,  "Maltese" ,  "Bergamasco Shepherd" ,  "Italian Rough-Haired Segugio" ,  "Dobermann" ,  "African Wild Dog" ,  "Affenpinscher" ,  "Labrador Retriever" ,  "Slovakian Chuvach" ,  "Parson Russell Terrier" ,  "Porcelaine" ,  "Norman Artesien Basset" ,  "Ibizan Podenco" ,  "Irish Red And White Setter" ,  "Weimaraner" ,  "Manchester Terrier" ,  "Brittany Spaniel" ,  "Papillon" ,  "Jämthund" ,  "Grand Basset Griffon Vendéen" ,  "Black Russian Terrier" ,  "Ariege Pointer" ,  "Deerhound" ,  "Petit Basset Griffon Vendeen" ,  "Montenegrin Mountain Hound" ,  "Coarse-Haired Styrian Hound" ,  "English Pointer" ,  "Brazilian Terrier" ,  "Danish-Swedish Farmdog" ,  "Catalan Sheepdog" ,  "Portuguese Pointer" ,  "Cirneco Dell'Etna" ,  "Curly-Coated Retriever" ,  "Kai" ,  "German Shepherd" ,  "American Staffordshire Terrier" ,  "Italian Pointing" ,  "Tibetan Spaniel" ,  "Bucovina Shepherd" ,  "Karst Shepherd" ,  "German Spitz" ,  "Saarloos Wolfdog" ,  "Norrbottenspitz" ,  "Istrian Short-Haired Hound" ,  "Samoyed" ,  "Labradoodle" ,  "Coton De Tulear" ,  "Transmontano Mastiff" ,  "Smooth Fox Terrier" ,  "Alaskan Malamute" ,  "Flat Coated Retriever Dog" ,  "Groenendael" ,  "Wirehaired Slovakian Pointer" ,  "Border Collie" ,  "Finnish Hound" ,  "Bearded Collie" ,  "Saluki" ,  "French Spaniel" ,  "Nederlandse Kooikerhondje" ,  "Spanish Water Dog" ,  "Black And Tan Coonhound Dog" ,  "Fawn Brittany Griffon" ,  "Chow Chow" ,  "Italian Cane Corso" ,  "Westphalian Dachsbracke" ,  "Entlebuch Cattle" ,  "Swedish Vallhund" ,  "Australian Shepherd" ,  "Magyar Agár" ,  "Italian Volpino" ,  "Irish Red Setter" ,  "Saint Bernard" ,  "German Hunting Terrier" ,  "Bouvier Des Flandres" ,  "English Foxhound" ,  "Leonberger" ,  "Japanese Spaniel" ,  "Mexican Hairless" ,  "Australian Cattle Dog" ,  "Akita" ,  "Bolognese" ,  "Spanish Mastiff" ,  "Braque du Bourbonnais" ,  "Appenzeller" ,  "Miniature Poodle" ,  "Borzoi" ,  "Polish Greyhound" ,  "Aidi" ,  "Greater Swiss Mountain Dog" ,  "Dingo" ,  "American Hairless" ,  "Beauceron" ,  "Gascon Saintongeois" ,  "Cavalier King Charles Spaniel" ,  "Icelandic Sheepdog" ,  "Majorca Shepherd" ,  "Yorkshire Terrier" ,  "Irish Spaniel" ,  "Husky" ,  "Rastreador Brasileiro" ,  "Posavatz Hound" ,  "Drever" ,  "Segugio Maremmano" ,  "Poodle" ,  "Otterhound" ,  "Keeshond" ,  "White Swiss Shepherd" ,  "Puli" ,  "Kleiner Münsterländer" ,  "Chesapeake Bay Retriever" ,  "Welsh Corgi (Cardigan)" ,  "Serbian Hound" ,  "Australian Kelpie" ,  "Shikoku" ,  "Rhodesian Ridgeback" ,  "Welsh Terrier" ,  "Finnish Lapponian" ,  "Portuguese Water Dog" ,  "Wirehaired Pointing Griffon" ,  "Komondor Dog" ,  "Cairn Terrier" ,  "Blenheim Spaniel" ,  "Pumi Dog" ,  "Kintamani-Bali" ,  "Korea Jindo Dog" ,  "Peruvian Hairless Dog" ,  "Stumpy Tail Cattle Dog" ,  "Bavarian Mountain Scent Hound" ,  "Japanese Chin" ,  "Kromfohrländer Dog" ,  "Briard" ,  "Pembroke Welsh Corgi" ,  "Majorca Mastiff" ,  "Kuvasz" ,  "West Siberian Laika" ,  "Finnish Spitz" ,  "Malinois" ,  "Gordon Setter" ,  "Norwegian Buhund" ,  "Fila Brasileiro" ,  "Giant Schnauzer" ,  "West Highland White Terrier" ,  "Carpathian Shepherd" ,  "Dutch Shepherd Dog" ,  "Slovakian Hound" ,  "Long-Haired Pyrenean Sheepdog" ,  "Golden Retriever" ,  "Great Anglo-French Hound" ,  "German Hound" ,  "Treeing Walker Coonhound" ,  "Boxer" ,  "Lancashire Heeler" ,  "Estrela Mountain" ,  "Griffon Bruxellois" ,  "Saint Miguel Cattle Dog" ,  "English Toy Terrier" ,  "Cardigan" ,  "Chinese Crested Dog" ,  "Dogo Argentino" ,  "Hovawart" ,  "Azawakh" ,  "Swedish Lapphund" ,  "English Setter" ,  "Shetland Sheepdog" ,  "Pyrenean Mastiff" ,  "Schiller Hound" ,  "Canadian Eskimo Dog" ,  "Cesky Terrier" ,  "Wire Fox Terrier" ,  "Bloodhound" ,  "English Springer Spaniel" ,  "Bull Terrier(Target Dog)" ,  "Kerry Blue Terrier" ,  "Burgos Pointer" ,  "Eurasian" ,  "Mastiff" ,  "Norwich Terrier" ,  "Artois Hound" ,  "Basset Fauve De Bretagne" ,  "French Tricolour Hound" ,  "Swiss Hound" ,  "Yakutian Laika" ,  "Redbone" ,  "Ibizan Hound" ,  "Wheaten Terrier" ,  "Australian Terrier" ,  "Valencian Terrier" ,  "Romagna Water Dog" ,  "Welsh Corgi (Pembroke)" ,  "Nova Scotia Duck Tolling Retriever" ,  "American Water Spaniel" ,  ] ;
 
-        console.log(class_scores);
-        document.getElementById("result").innerHTML = classes[max_score_id].toString();
+        const scoreArray = Array.from(class_scores);
+        const indexed = scoreArray.map((score, index) => ({ score, index }));
+        indexed.sort((a, b) => b.score - a.score);
+        const top10 = indexed.slice(0, 10);
+
+        let html = '<div id="topResult"><h3 id="overallTop">' + [topResultsArray[(randomNumber(0, topResultsArray.length - 1))]] + ' ' + classes[top10[0].index] + '!</h3><strong>Top 10 Predictions:</strong><br>';
+        top10.forEach((item, rank) => {
+          const percentage = (item.score * 100).toFixed(2);
+          html += `<div class="prediction-item ${rank === 0 ? 'rank-1' : ''}">
+            <span class="prediction-rank">#${rank + 1}</span> - 
+            <span class="prediction-breed">${classes[item.index]}</span><br>
+            <span class="prediction-score" title="The confidence level, that the image that you provided matches this breed.">Confidence: ${percentage}%</span>
+          </div>`;
+        });
+
+        html += `<br><strong>Image Dimensions:</strong> ${originalShape[0]}x${originalShape[1]} pixels`;
+        html += `<br><strong>Total Classes Analyzed:</strong> ${classes.length}`;
+
+        resultDiv.innerHTML = html;
+        example.dispose();
+        prediction.dispose();
+      } catch (err) {
+        resultDiv.innerHTML = 'Error during prediction: ' + err.message;
+        console.error(err);
       }
-    </script>
-  </body>
+    }
+  </script>
+</body>
+
 </html>
